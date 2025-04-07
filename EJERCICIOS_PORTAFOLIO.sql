@@ -10,7 +10,7 @@ Se trabajará con las siguientes tablas para simular una empresa:
 */
 
 
--- **1️ Consultas Básicas en SQL Server**
+-- ** 1️ Consultas Básicas en SQL Server **
 
 -- 1. Crea la base de datos y las tablas mencionadas arriba.
 
@@ -153,7 +153,7 @@ ORDER BY
 
 -- ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
---  **2 Agrupación de Datos**
+--  ** 2 Agrupación de Datos **
 
 -- 1. Cuenta cuántos empleados hay en cada departamento.
 
@@ -254,7 +254,7 @@ SELECT Nombre,FechaIngreso FROM EmpleadosAntiguos;
 
 -- ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
--- **3 Relaciones y JOINS**
+-- ** 3 Relaciones y JOINS **
 
 -- 1. Muestra una lista de empleados junto con su departamento y los proyectos en los que trabajan.  
 
@@ -355,37 +355,247 @@ SELECT * FROM empleados WHERE salario >
 
 -- ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
--- **4️ Operaciones DML (Manipulación de Datos)**
+-- ** 4️ Operaciones DML (Manipulación de Datos) **
 
 -- 1. Inserta nuevos empleados en la tabla utilizando `INSERT`.  
+
+INSERT INTO empleados (Nombre,Edad,DepartamentoID,Salario,FechaIngreso)
+VALUES
+('Jaciento Urmeneta',56,2,450000,'2015-08-20'),
+('Edelmira Pascal',58,3,520000,'2015-12-22'),
+('Juan Pedregal',49,4,520000,'2016-04-20'),
+('Violeta Casamidas',44,4,475000,'2017-04-21'),
+('Giorgos Covarrubias',61,2,620000,'2017-04-21'),
+('Maria Joaquina Wersmer',23,3,580000,'2025-03-27');
+
 -- 2. Modifica el salario de un empleado con `UPDATE`.  
--- 3. Elimina un empleado con `DELETE`.  
+
+UPDATE Empleados SET Salario = 680000 WHERE ID = 15;
+
+-- 3. Elimina un empleado con `DELETE`.
+
+DELETE FROM asignaciones WHERE EmpleadoID =12;
+DELETE FROM Empleados WHERE ID = 12;
+
 -- 4. Borra todos los datos de una tabla sin eliminar su estructura (`TRUNCATE`).  
+
+TRUNCATE TABLE EmpleadosAntiguos;
+
 -- 5. Usa `EXISTS` para verificar si un empleado tiene asignaciones antes de eliminarlo.  
+
+SELECT 
+	* 
+FROM 
+	empleados 
+WHERE 
+	EXISTS (SELECT 1 
+			FROM asignaciones 
+			WHERE empleados.ID = asignaciones.EmpleadoID);
+
 -- 6. Crea una subconsulta que devuelva el ID del departamento con el salario promedio más alto.  
+
+SELECT 
+	DepartamentoID 
+FROM 
+	empleados 
+GROUP BY 
+	DepartamentoID 
+HAVING AVG(Salario) = (
+						SELECT MAX(PromedioSalario)
+						FROM (SELECT 
+								DepartamentoID, 
+								AVG(Salario) AS PromedioSalario
+							 FROM 
+								empleados
+							GROUP BY 
+								DepartamentoID) AS Subquery);
+
 -- 7. Usa una subconsulta correlacionada para encontrar el empleado con el salario más alto en cada departamento.  
 
----
+SELECT 
+	nombre 
+FROM 
+	empleados 
+WHERE 
+	salario = (
+				SELECT MAX(Salario) AS SalarioMaximo 
+				FROM empleados 
+				WHERE empleados.DepartamentoID = empleados.DepartamentoID); 
 
-### **5️⃣ Procedimientos Almacenados y Variables**
-1. Crea un procedimiento almacenado que inserte un nuevo empleado.  
-2. Crea un procedimiento que devuelva los detalles de un empleado por ID.  
-3. Usa variables para calcular y almacenar temporalmente el total de salarios de un departamento.  
-4. Implementa un bloque `BEGIN...END` para realizar múltiples inserciones.  
-5. Crea un procedimiento que aumente el salario de los empleados según su antigüedad.  
-6. Implementa un cursor para recorrer empleados y calcular bonificaciones anuales.  
-7. Crea un procedimiento que realice una transacción y, si falla, haga `ROLLBACK`.  
+-- ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
----
+-- ** 5️ Procedimientos Almacenados y Variables **
 
-### **6️⃣ Triggers y Funciones**
-1. Crea un `TRIGGER` que registre cambios en el salario de un empleado en la tabla `HistorialSalarios`.  
-2. Crea un `TRIGGER` que impida la eliminación de empleados asignados a un proyecto.  
-3. Implementa una función que reciba un salario y devuelva la categoría salarial (`Bajo`, `Medio`, `Alto`).  
-4. Crea una función que calcule el número de años que un empleado ha trabajado en la empresa.  
-5. Usa funciones del sistema para formatear fechas (`GETDATE()`, `DATEPART()`).  
-6. Implementa una conversión de tipos de datos (`CAST`, `CONVERT`).  
-7. Crea una función de usuario que devuelva el total de empleados en un departamento.  
+-- 1. Crea un procedimiento almacenado que inserte un nuevo empleado.
+
+CREATE PROCEDURE dbo.Insertar_empleado
+(
+	@Nombre VARCHAR(60),
+    @Edad INT,
+    @DepartamentoID INT,
+    @Salario MONEY,
+    @FechaIngreso DATE
+)
+AS
+BEGIN
+
+INSERT INTO empleados(Nombre,Edad,DepartamentoID,Salario,FechaIngreso)
+VALUES
+(@Nombre,@Edad,@DepartamentoID,@Salario,@FechaIngreso);
+
+END;
+
+EXECUTE dbo.Insertar_empleado 'Juan Robledo', 25, 3, 520000, '2025-03-27';
+
+SELECT * FROM empleados WHERE Nombre = 'Juan Robledo';
+
+-- 2. Crea un procedimiento que devuelva los detalles de un empleado por ID.
+
+CREATE PROCEDURE dbo.empleado_por_ID
+(
+@ID INT
+)
+AS
+BEGIN
+	SELECT
+		*
+	FROM
+		empleados
+	WHERE
+		ID = @ID;
+END;
+
+EXECUTE dbo.empleado_por_ID 7; 
+
+-- 3. Usa variables para calcular y almacenar temporalmente el total de salarios de un departamento.  
+
+DECLARE @Total INT;
+SELECT @Total = SUM(Salario)
+FROM empleados
+WHERE DepartamentoID = 4;
+
+SELECT @Total AS TotalSalarios;
+
+-- 4. Implementa un bloque `BEGIN...END` para realizar múltiples inserciones. 
+
+CREATE PROCEDURE dbo.nuevo_proyecto
+(
+@Nombre VARCHAR(50),
+@Presupuesto INT
+)
+AS
+BEGIN
+	INSERT INTO Proyectos (Nombre,Presupuesto)
+	VALUES
+	(@Nombre,@Presupuesto);
+END;
+
+EXECUTE dbo.nuevo_proyecto 'Proyecto Etha', 350000;
+
+-- 5. Crea un procedimiento que aumente el salario de los empleados según su antigüedad.  
+
+CREATE PROCEDURE dbo.aumento_salario
+(
+@ID INT
+)
+AS
+BEGIN
+	UPDATE Empleados
+	SET Salario = CASE
+					WHEN DATEDIFF(YEAR, FechaIngreso, GETDATE()) < 1 THEN Salario * 1.05
+					WHEN DATEDIFF(YEAR, FechaIngreso, GETDATE()) BETWEEN 1 AND 4 THEN Salario * 1.10
+					WHEN DATEDIFF(YEAR, FechaIngreso, GETDATE()) >= 5 THEN Salario * 1.15
+					ELSE Salario
+				 END
+	WHERE ID = @ID; 
+END;
+
+EXECUTE dbo.aumento_salario
+		@ID = 22
+
+SELECT * FROM empleados;
+
+-- 6. Implementa un cursor para recorrer empleados y calcular bonificaciones anuales.  
+
+DECLARE @Empleado VARCHAR(60), @Salario INT, @Annio_ingreso DATE,@Bonificacion VARCHAR(20);
+
+DECLARE bonificaciones CURSOR
+LOCAL FAST_FORWARD
+FOR
+	SELECT
+		Nombre,
+		Salario,
+		FechaIngreso
+	FROM
+		Empleados
+
+OPEN bonificaciones
+
+FETCH NEXT FROM bonificaciones INTO @Empleado, @Salario, @Annio_ingreso;
+
+WHILE @@FETCH_STATUS = 0
+
+BEGIN
+	SET @Bonificacion = CASE 
+							WHEN DATEDIFF(YEAR, @Annio_ingreso, GETDATE()) < 1 THEN 'Bonificación Mínima'
+							WHEN DATEDIFF(YEAR, @Annio_ingreso, GETDATE()) BETWEEN 1 AND 4 THEN 'Bonificación Parcial'
+							WHEN DATEDIFF(YEAR, @Annio_ingreso, GETDATE()) >= 5 THEN 'Bonificación Máxima'
+							ELSE 'Sin Bonificación'
+						END;
+
+	SELECT @Empleado AS Empleado, @Bonificacion AS Bonificación;
+
+FETCH NEXT FROM bonificaciones INTO @Empleado, @Salario, @Annio_ingreso;
+END;
+
+CLOSE bonificaciones;
+DEALLOCATE bonificaciones;
+
+-- 7. Crea un procedimiento que realice una transacción y, si falla, haga `ROLLBACK`.  
+
+CREATE PROCEDURE dbo.actualizar_datos_empleado
+    @ID INT,
+    @NuevoSalario INT,
+    @NuevaFecha DATE
+AS
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        UPDATE Empleados
+        SET Salario = @NuevoSalario
+        WHERE ID = @ID;
+
+        UPDATE Empleados
+        SET FechaIngreso = @NuevaFecha
+        WHERE ID = @ID;
+
+        COMMIT;
+        PRINT 'Actualización exitosa.';
+    END TRY
+
+    BEGIN CATCH
+        ROLLBACK;
+        PRINT 'Error encontrado. Se realizó rollback.';
+    END CATCH
+END;
+
+EXEC dbo.actualizar_datos_empleado
+    @ID = 1,
+    @NuevoSalario = 60000,
+    @NuevaFecha = '2022-01-01';
+
+-- ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+-- **6 Triggers y Funciones**
+
+-- 1. Crea un `TRIGGER` que registre cambios en el salario de un empleado en la tabla `HistorialSalarios`.  
+-- 2. Crea un `TRIGGER` que impida la eliminación de empleados asignados a un proyecto.  
+-- 3. Implementa una función que reciba un salario y devuelva la categoría salarial (`Bajo`, `Medio`, `Alto`).  
+-- 4. Crea una función que calcule el número de años que un empleado ha trabajado en la empresa.  
+-- 5. Usa funciones del sistema para formatear fechas (`GETDATE()`, `DATEPART()`).  
+-- 6. Implementa una conversión de tipos de datos (`CAST`, `CONVERT`).  
+-- 7. Crea una función de usuario que devuelva el total de empleados en un departamento.  
 
 ---
 
